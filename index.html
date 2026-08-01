@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Controle de Estoque</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,.1);
+        }
+
+        h1,h2{
+            color:#2c3e50;
+        }
+
+        form{
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:15px;
+            margin-bottom:25px;
+            background:#f9fbfd;
+            padding:15px;
+            border-radius:6px;
+            border:1px solid #ddd;
+        }
+
+        input,textarea{
+            padding:10px;
+            border:1px solid #ccc;
+            border-radius:5px;
+        }
+
+        textarea{
+            grid-column:span 2;
+        }
+
+        button{
+            grid-column:span 2;
+            padding:12px;
+            border:none;
+            border-radius:5px;
+            background:#3498db;
+            color:white;
+            cursor:pointer;
+            font-size:16px;
+            font-weight:bold;
+        }
+
+        button:hover{
+            background:#2980b9;
+        }
+
+        table{
+            width:100%;
+            border-collapse:collapse;
+            margin-top:20px;
+        }
+
+        table,th,td{
+            border:1px solid #ddd;
+        }
+
+        th,td{
+            padding:10px;
+            text-align:center;
+        }
+
+        th{
+            background:#f2f4f7;
+        }
+
+        .btn-delete{
+            background:#e74c3c;
+            padding:8px 12px;
+            border:none;
+            border-radius:5px;
+            color:white;
+            cursor:pointer;
+        }
+
+        .btn-delete:hover{
+            background:#c0392b;
+        }
+
+        .resumo{
+            margin-top:30px;
+            background:#f9fbfd;
+            padding:20px;
+            border-radius:8px;
+            border:1px solid #ddd;
+        }
+
+        .resumo p{
+            font-size:18px;
+            margin:10px 0;
+        }
+
+        .valor-total{
+            color:green;
+            font-weight:bold;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>📦 Controle de Estoque</h1>
+
+<h2>Cadastrar Novo Produto</h2>
+
+<form id="produtoForm">
+
+<input type="text" id="nome" placeholder="Nome do Produto" required>
+
+<input type="number" id="preco" step="0.01" placeholder="Preço (R$)" required>
+
+<input type="number" id="quantidade" placeholder="Quantidade em Estoque" required>
+
+<textarea id="descricao" placeholder="Descrição (Opcional)"></textarea>
+
+<button type="submit">Salvar Produto</button>
+
+</form>
+
+<h2>Lista de Produtos</h2>
+
+<table>
+
+<thead>
+
+<tr>
+<th>ID</th>
+<th>Nome</th>
+<th>Descrição</th>
+<th>Preço</th>
+<th>Qtd</th>
+<th>Valor Total</th>
+<th>Ações</th>
+</tr>
+
+</thead>
+
+<tbody id="tabelaProdutos"></tbody>
+
+</table>
+
+<div class="resumo">
+
+<h2>Resumo do Estoque</h2>
+
+<p>📦 <strong>Produtos cadastrados:</strong> <span id="totalProdutos">0</span></p>
+
+<p>📚 <strong>Total de unidades:</strong> <span id="totalUnidades">0</span></p>
+
+<p class="valor-total">
+💰 <strong>Valor total do estoque:</strong>
+<span id="valorTotalEstoque">R$ 0,00</span>
+</p>
+
+</div>
+
+</div>
+
+<script>
+
+const API_URL="http://127.0.0.1:8000";
+
+async function carregarProdutos(){
+
+    try{
+
+        const resposta=await fetch(`${API_URL}/produtos/`);
+
+        const produtos=await resposta.json();
+
+        const tabela=document.getElementById("tabelaProdutos");
+
+        tabela.innerHTML="";
+
+        let totalUnidades=0;
+
+        let valorTotalEstoque=0;
+
+        produtos.forEach(produto=>{
+
+            const valorProduto=produto.preco*produto.quantidade;
+
+            totalUnidades+=produto.quantidade;
+
+            valorTotalEstoque+=valorProduto;
+
+            const linha=document.createElement("tr");
+
+            linha.innerHTML=`
+                <td>${produto.id}</td>
+                <td>${produto.nome}</td>
+                <td>${produto.descricao || "-"}</td>
+                <td>R$ ${produto.preco.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+                <td>${produto.quantidade}</td>
+                <td class="valor-total">
+                    R$ ${valorProduto.toLocaleString('pt-BR',{minimumFractionDigits:2})}
+                </td>
+                <td>
+                    <button class="btn-delete" onclick="deletarProduto(${produto.id})">
+                        Excluir
+                    </button>
+                </td>
+            `;
+
+            tabela.appendChild(linha);
+
+        });
+
+        document.getElementById("totalProdutos").textContent=produtos.length;
+
+        document.getElementById("totalUnidades").textContent=totalUnidades.toLocaleString("pt-BR");
+
+        document.getElementById("valorTotalEstoque").textContent=
+        "R$ "+valorTotalEstoque.toLocaleString("pt-BR",{
+            minimumFractionDigits:2,
+            maximumFractionDigits:2
+        });
+
+    }catch(erro){
+
+        console.error(erro);
+
+    }
+
+}
+
+document.getElementById("produtoForm").addEventListener("submit",async(e)=>{
+
+e.preventDefault();
+
+const novoProduto={
+
+nome:document.getElementById("nome").value,
+
+preco:parseFloat(document.getElementById("preco").value),
+
+quantidade:parseInt(document.getElementById("quantidade").value),
+
+descricao:document.getElementById("descricao").value
+
+};
+
+const resposta=await fetch(`${API_URL}/produtos/`,{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify(novoProduto)
+
+});
+
+if(resposta.ok){
+
+document.getElementById("produtoForm").reset();
+
+carregarProdutos();
+
+}else{
+
+const erro=await resposta.json();
+
+alert("Erro: "+(erro.detail || "Erro ao cadastrar"));
+
+}
+
+});
+
+async function deletarProduto(id){
+
+if(confirm("Tem certeza que deseja excluir este produto?")){
+
+const resposta=await fetch(`${API_URL}/produtos/${id}`,{
+
+method:"DELETE"
+
+});
+
+if(resposta.ok){
+
+carregarProdutos();
+
+}else{
+
+alert("Erro ao excluir.");
+
+}
+
+}
+
+}
+
+carregarProdutos();
+
+</script>
+
+</body>
+</html>

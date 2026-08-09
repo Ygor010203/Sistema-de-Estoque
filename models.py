@@ -10,12 +10,13 @@ class Produto(Base):
     descricao = Column(String, index=True)
     preco = Column(Float, index=True)
     quantidade = Column(Integer, index=True)
+    nf = Column(String)  # Campo da Nota Fiscal integrado
 
-# Novo modelo para a tabela de logs/histórico de alterações
+# Modelo para a tabela de logs/histórico de alterações
 class HistoricoMovimentacao(Base):
     __tablename__ = "historico"
 
     id = Column(Integer, primary_key=True, index=True)
-    acao = Column(String, index=True) # Ex: "CRIADO", "ATUALIZADO", "DELETADO"
+    acao = Column(String, index=True)  # Ex: "CRIADO", "ATUALIZADO", "DELETADO"
     produto_nome = Column(String)
     data_hora = Column(DateTime, default=datetime.utcnow)

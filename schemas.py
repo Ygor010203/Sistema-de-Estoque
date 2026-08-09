@@ -14,6 +14,20 @@ class ProdutoResponse(ProdutoBase):
     class Config:
         from_attributes = True
 
+
+# schemas.py
+class ProdutoBase(BaseModel):
+    nome: str
+    descricao: Optional[str] = None
+    preco: float
+    quantidade: int
+    nf: str  # <--- ADICIONE ESTA LINHA
+
+class ProdutoResponse(ProdutoBase):
+    id: int
+    class Config:
+        from_attributes = True        
+
 class HistoricoResponse(BaseModel):
     id: int
     acao: str

@@ -29,7 +29,7 @@ def get_db():
     finally:
         db.close()
 
-# 1. Cadastrar um novo produto (Com validação de duplicidade e log)
+# 1. Cadastrar um novo produto (Com validação de duplicidade, NF e log)
 @app.post("/produtos/", response_model=schemas.ProdutoResponse)
 def criar_produto(produto: schemas.ProdutoBase, db: Session = Depends(get_db)):
     produto_existente = db.query(models.Produto).filter(models.Produto.nome == produto.nome).first()
@@ -40,7 +40,8 @@ def criar_produto(produto: schemas.ProdutoBase, db: Session = Depends(get_db)):
         nome=produto.nome,
         descricao=produto.descricao,
         preco=produto.preco,
-        quantidade=produto.quantidade
+        quantidade=produto.quantidade,
+        nf=produto.nf  # <--- ADICIONADO AQUI
     )
     db.add(db_produto)
     db.commit()
@@ -90,6 +91,7 @@ def atualizar_produto(produto_id: int, produto: schemas.ProdutoBase, db: Session
     db_produto.descricao = produto.descricao
     db_produto.preco = produto.preco
     db_produto.quantidade = produto.quantidade
+    db_produto.nf = produto.nf  # <--- ADICIONADO AQUI TAMBÉM
     
     db.commit()
     db.refresh(db_produto)

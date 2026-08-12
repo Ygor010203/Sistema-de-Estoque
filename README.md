@@ -1,4 +1,4 @@
-<img width="1891" height="860" alt="image" src="https://github.com/user-attachments/assets/238002f2-758d-42ad-af9f-0709b303e22b" /># 📦 Sistema de Controle de Estoque
+# 📦 Sistema de Controle de Estoque
 
 > Sistema desenvolvido em Python para gerenciamento eficiente de estoque, integrando automações de processos e manipulação de planilhas.
 

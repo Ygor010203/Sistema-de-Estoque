@@ -3,261 +3,255 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Controle de Estoque</title>
-
+    <title>Controle de Estoque</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f6f9;
-            margin: 0;
-            padding: 20px;
-            color: #333;
-        }
-
-        .container {
-            max-width: 1000px;
-            margin: auto;
-            background: white;
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,.1);
-        }
-
-        h1, h2 {
-            color: #2c3e50;
-        }
-
-        form {
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f9; color: #333; display: flex; flex-direction: column; align-items: center; }
+        .container-geral { width: 100%; max-width: 1200px; }
+        h1, h2 { color: #2c3e50; }
+        .form-container, .table-container, .summary-container { background: #fff; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%; box-sizing: border-box; }
+        
+        .form-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 25px;
-            background: #f9fbfd;
-            padding: 15px;
-            border-radius: 6px;
-            border: 1px solid #ddd;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            margin-bottom: 10px;
         }
 
-        input, textarea {
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
+        input, textarea, button { padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; width: 100%; }
+        textarea { grid-column: 1 / -1; }
+        
+        button { background-color: #3498db; color: white; border: none; cursor: pointer; font-weight: bold; grid-column: 1 / -1; }
+        button:hover { background-color: #2980b9; }
+        
+        .btn-excluir { background-color: #e74c3c; width: auto; padding: 5px 10px; font-size: 12px; }
+        .btn-excluir:hover { background-color: #c0392b; }
 
-        textarea {
-            grid-column: span 2;
-        }
+        .btn-roxo { background-color: #6f42c1; width: auto; padding: 10px 15px; display: inline-block; margin-right: 10px; }
+        .btn-roxo:hover { background-color: #5a3298; }
 
-        button {
-            grid-column: span 2;
-            padding: 12px;
-            border: none;
-            border-radius: 5px;
-            background: #3498db;
-            color: white;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-        }
-
-        button:hover {
-            background: #2980b9;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        table, th, td {
-            border: 1px solid #ddd;
-        }
-
-        th, td {
-            padding: 10px;
-            text-align: center;
-        }
-
-        th {
-            background: #f2f4f7;
-        }
-
-        .btn-delete {
-            background: #e74c3c;
-            padding: 8px 12px;
-            border: none;
-            border-radius: 5px;
-            color: white;
-            cursor: pointer;
-        }
-
-        .btn-delete:hover {
-            background: #c0392b;
-        }
-
-        .resumo {
-            margin-top: 30px;
-            background: #f9fbfd;
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-        }
-
-        .resumo p {
-            font-size: 18px;
-            margin: 10px 0;
-        }
-
-        .valor-total {
-            color: green;
-            font-weight: bold;
-        }
+        .btn-verde { background-color: #28a745; width: auto; padding: 10px 15px; display: inline-block; }
+        .btn-verde:hover { background-color: #218838; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #f8f9fa; }
     </style>
 </head>
-
 <body>
 
-<div class="container">
+    <div class="container-geral">
+        <h1>Controle de Estoque</h1>
 
-    <h1>📦 Controle de Estoque</h1>
+        <div class="form-container">
+            <h2>Cadastrar Novo Produto</h2>
+            <div class="form-grid">
+                <input type="text" id="nome" placeholder="Nome do Produto (Ex: N4)">
+                <input type="text" id="descricao" placeholder="Descrição (Ex: CARRO)">
+                <input type="number" step="0.01" id="preco" placeholder="Preço Unitário">
+                <input type="number" id="quantidade" placeholder="Quantidade (Entrada)">
+                <input type="text" id="nf" placeholder="Nota Fiscal (NF)">
+            </div>
+            <button onclick="cadastrarProduto()">Salvar Produto</button>
+        </div>
 
-    <h2>Cadastrar Novo Produto</h2>
+        <div class="table-container">
+            <h2>Lista de Produtos</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Descrição</th>
+                        <th>Preço</th>
+                        <th>Qtd (Entrada)</th>
+                        <th>NF</th>
+                        <th>Valor Total</th>
+                        <th>Saldo Atualizado</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-produtos">
+                    <!-- Preenchido via JavaScript -->
+                </tbody>
+            </table>
+        </div>
 
-    <form id="produtoForm">
-        <input type="text" id="nome" placeholder="Nome do Produto" required>
-        <input type="number" id="preco" step="0.01" placeholder="Preço (R$)" required>
-        <input type="number" id="quantidade" placeholder="Quantidade em Estoque" required>
-        <input type="text" id="nf" placeholder="Número da Nota Fiscal" class="form-control">
-        <textarea id="descricao" placeholder="Descrição (Opcional)"></textarea>
-        <button type="submit">Salvar Produto</button>
-    </form>
+        <div class="summary-container">
+            <h2>Resumo do Estoque</h2>
+            <p>📦 Produtos cadastrados: <strong id="total-produtos">0</strong></p>
+            <p>📊 Total de unidades no saldo: <strong id="total-unidades">0</strong></p>
+            <p>💰 Valor total do estoque (atualizado): <strong id="valor-total-estoque">R$ 0,00</strong></p>
+        </div>
 
-    <h2>Lista de Produtos</h2>
+        <div class="table-container">
+            <h2>🚀 Saídas Autorizadas / Pipefy (Finalizados)</h2>
+            
+            <!-- Botões de Ação do Pipefy -->
+            <div style="margin-bottom: 15px;">
+                <button class="btn-roxo" onclick="carregarDados()">Atualizar Dados do Pipefy</button>
+                <button class="btn-verde" onclick="baixarPlanilha()">Baixar Planilha</button>
+            </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Nome</th>
-                <th>Descrição</th>
-                <th>Preço</th>
-                <th>Qtd</th>
-                <th>NF</th>
-                <th>Valor Total</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody id="tabelaProdutos"></tbody>
-    </table>
-
-    <div class="resumo">
-        <h2>Resumo do Estoque</h2>
-        <p>📦 <strong>Produtos cadastrados:</strong> <span id="totalProdutos">0</span></p>
-        <p>📚 <strong>Total de unidades:</strong> <span id="totalUnidades">0</span></p>
-        <p class="valor-total">
-            💰 <strong>Valor total do estoque:</strong>
-            <span id="valorTotalEstoque">R$ 0,00</span>
-        </p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Card ID</th>
+                        <th>Produto</th>
+                        <th>Prestador</th>
+                        <th>Cidade</th>
+                        <th>NF</th>
+                        <th>Qtd Saída</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-pipefy">
+                    <!-- Preenchido via JavaScript -->
+                </tbody>
+            </table>
+        </div>
     </div>
 
-</div>
+    <script>
+        const API_URL = "http://127.0.0.1:8000";
 
-<script>
-const API_URL = "http://127.0.0.1:8000";
+        async function carregarDados() {
+            try {
+                const [resProdutos, resPipefy] = await Promise.all([
+                    fetch(`${API_URL}/produtos/`),
+                    fetch(`${API_URL}/pipefy/finalizados/`)
+                ]);
 
-async function carregarProdutos() {
-    try {
-        const resposta = await fetch(`${API_URL}/produtos/`);
-        const produtos = await resposta.json();
-        const tabela = document.getElementById("tabelaProdutos");
-        tabela.innerHTML = "";
+                if (!resProdutos.ok || !resPipefy.ok) throw new Error("Erro de conexão com a API.");
 
-        let totalUnidades = 0;
-        let valorTotalEstoque = 0;
+                const produtos = await resProdutos.json();
+                const pipefyData = await resPipefy.json();
+                const cardsFinalizados = pipefyData.cards_finalizados || [];
 
-        produtos.forEach(produto => {
-            const valorProduto = produto.preco * produto.quantidade;
-            totalUnidades += produto.quantidade;
-            valorTotalEstoque += valorProduto;
+                const tbodyPipefy = document.getElementById("tabela-pipefy");
+                tbodyPipefy.innerHTML = "";
+                
+                cardsFinalizados.forEach(card => {
+                    const email = card.prestador || "";
+                    const nomePrestador = email.includes('@') ? email.split('@')[0] : email;
 
-            const linha = document.createElement("tr");
-            linha.innerHTML = `
-                <td>${produto.id}</td>
-                <td>${produto.nome}</td>
-                <td>${produto.descricao || "-"}</td>
-                <td>R$ ${produto.preco.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                <td>${produto.quantidade}</td>
-                <td>${produto.nf || "-"}</td>
-                <td class="valor-total">
-                    R$ ${valorProduto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-                </td>
-                <td>
-                    <button class="btn-delete" onclick="deletarProduto(${produto.id})">
-                        Excluir
-                    </button>
-                </td>
-            `;
-            tabela.appendChild(linha);
-        });
+                    tbodyPipefy.innerHTML += `
+                        <tr>
+                            <td>${card.card_id}</td>
+                            <td>${card.produto_nome || '-'}</td>
+                            <td>${nomePrestador}</td>
+                            <td>${card.cidade || '-'}</td>
+                            <td>${card.nf || '-'}</td>
+                            <td>${card.quantidade || 0}</td>
+                        </tr>
+                    `;
+                });
 
-        document.getElementById("totalProdutos").textContent = produtos.length;
-        document.getElementById("totalUnidades").textContent = totalUnidades.toLocaleString("pt-BR");
-        document.getElementById("valorTotalEstoque").textContent = 
-            "R$ " + valorTotalEstoque.toLocaleString("pt-BR", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
+                const tbodyProdutos = document.getElementById("tabela-produtos");
+                tbodyProdutos.innerHTML = "";
+                
+                let totalProdutosCount = produtos.length;
+                let totalUnidadesSaldo = 0;
+                let valorTotalEstoque = 0;
 
-    } catch (erro) {
-        console.error(erro);
-    }
-}
+                produtos.forEach(p => {
+                    const valorTotalItem = p.preco * p.quantidade;
 
-document.getElementById("produtoForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
+                    const saidasDestaNF = cardsFinalizados.filter(card => {
+                        const nomeCard = (card.produto_nome || "").trim().toLowerCase();
+                        const nomeProd = p.nome.trim().toLowerCase();
+                        const nfCard = String(card.nf || "").trim();
+                        const nfProd = String(p.nf || "").trim();
 
-    const novoProduto = {
-        nome: document.getElementById("nome").value,
-        preco: parseFloat(document.getElementById("preco").value),
-        quantidade: parseInt(document.getElementById("quantidade").value),
-        nf: document.getElementById("nf").value,
-        descricao: document.getElementById("descricao").value
-    };
+                        return nomeCard.includes(nomeProd) && nfCard === nfProd;
+                    });
 
-    const resposta = await fetch(`${API_URL}/produtos/`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(novoProduto)
-    });
+                    const qtdSaidaDestaNF = saidasDestaNF.reduce((acc, curr) => acc + curr.quantidade, 0);
+                    const saldoAtual = p.quantidade - qtdSaidaDestaNF;
 
-    if (resposta.ok) {
-        document.getElementById("produtoForm").reset();
-        carregarProdutos();
-    } else {
-        const erro = await resposta.json();
-        alert("Erro: " + (erro.detail || "Erro ao cadastrar"));
-    }
-});
+                    totalUnidadesSaldo += saldoAtual;
+                    valorTotalEstoque += (p.preco * saldoAtual);
 
-async function deletarProduto(id) {
-    if (confirm("Tem certeza que deseja excluir este produto?")) {
-        const resposta = await fetch(`${API_URL}/produtos/${id}`, {
-            method: "DELETE"
-        });
+                    const statusTexto = saldoAtual <= 5 ? "Estoque Baixo" : "Estoque Confortável";
+                    const statusCor = saldoAtual <= 5 ? "red" : "green";
 
-        if (resposta.ok) {
-            carregarProdutos();
-        } else {
-            alert("Erro ao excluir.");
+                    tbodyProdutos.innerHTML += `
+                        <tr>
+                            <td>${p.id}</td>
+                            <td>${p.nome}</td>
+                            <td>${p.descricao || ''}</td>
+                            <td>R$ ${p.preco.toFixed(2)}</td>
+                            <td>${p.quantidade}</td>
+                            <td>${p.nf || '-'}</td>
+                            <td>R$ ${valorTotalItem.toFixed(2)}</td>
+                            <td style="font-weight: bold;">${saldoAtual}</td>
+                            <td style="color: ${statusCor}; font-weight: bold;">${statusTexto}</td>
+                            <td><button class="btn-excluir" onclick="deletarProduto(${p.id})">Excluir</button></td>
+                        </tr>
+                    `;
+                });
+
+                document.getElementById("total-produtos").innerText = totalProdutosCount;
+                document.getElementById("total-unidades").innerText = totalUnidadesSaldo;
+                document.getElementById("valor-total-estoque").innerText = `R$ ${valorTotalEstoque.toFixed(2)}`;
+
+            } catch (error) {
+                console.error(error);
+                alert("Erro de conexão com a API. Verifique se o FastAPI está rodando.");
+            }
         }
-    }
-}
 
-carregarProdutos();
-</script>
+        async function cadastrarProduto() {
+            const produto = {
+                nome: document.getElementById("nome").value,
+                descricao: document.getElementById("descricao").value,
+                preco: parseFloat(document.getElementById("preco").value) || 0,
+                quantidade: parseInt(document.getElementById("quantidade").value) || 0,
+                nf: document.getElementById("nf").value
+            };
 
+            try {
+                const response = await fetch(`${API_URL}/produtos/`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(produto)
+                });
+
+                if (response.ok) {
+                    document.getElementById("nome").value = "";
+                    document.getElementById("descricao").value = "";
+                    document.getElementById("preco").value = "";
+                    document.getElementById("quantidade").value = "";
+                    document.getElementById("nf").value = "";
+                    carregarDados();
+                } else {
+                    alert("Erro ao cadastrar produto.");
+                }
+            } catch (error) {
+                alert("Erro de conexão ao tentar cadastrar.");
+            }
+        }
+
+        async function deletarProduto(id) {
+            if (!confirm("Tem certeza que deseja excluir este produto?")) return;
+
+            try {
+                const response = await fetch(`${API_URL}/produtos/${id}`, { method: "DELETE" });
+                if (response.ok) {
+                    carregarDados();
+                } else {
+                    alert("Erro ao deletar produto.");
+                }
+            } catch (error) {
+                alert("Erro de conexão ao tentar deletar.");
+            }
+        }
+
+        function baixarPlanilha() {
+            window.location.href = `${API_URL}/pipefy/exportar-excel/`;
+        }
+
+        // Executa assim que a página é carregada
+        window.onload = carregarDados;
+    </script>
 </body>
 </html>

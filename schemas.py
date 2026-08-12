@@ -1,38 +1,26 @@
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime  # ✅ IMPORT AQUI
 
 class ProdutoBase(BaseModel):
     nome: str
     descricao: Optional[str] = None
     preco: float
     quantidade: int
+    nf: str
+
+class ProdutoCreate(ProdutoBase):
+    pass
 
 class ProdutoResponse(ProdutoBase):
     id: int
 
     class Config:
-        from_attributes = True
-
-
-# schemas.py
-class ProdutoBase(BaseModel):
-    nome: str
-    descricao: Optional[str] = None
-    preco: float
-    quantidade: int
-    nf: str  # <--- ADICIONE ESTA LINHA
-
-class ProdutoResponse(ProdutoBase):
-    id: int
-    class Config:
-        from_attributes = True        
+        orm_mode = True
 
 class HistoricoResponse(BaseModel):
     id: int
     acao: str
     produto_nome: str
-    data_hora: datetime
 
     class Config:
-        from_attributes = True
+        orm_mode = True

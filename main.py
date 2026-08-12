@@ -1,18 +1,21 @@
-from fastapi import FastAPI, Depends, HTTPException, Query
+import io
+import pandas as pd
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from typing import List, Optional
+import httpx
 
+# (Certifique-se de importar seus módulos locais corretamente, ex: models, database, etc.)
 import models
-import schemas
 from database import SessionLocal, engine
 
-# Cria as tabelas no banco de dados automaticamente se elas não existirem
+# Cria as tabelas se não existirem
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# Configuração do CORS para permitir a comunicação com o Frontend
+# Configuração de CORS (Permite requisições do frontend)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,7 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Função para conectar com o banco de dados a cada requisição
+# Dependência para obter a sessão do banco de dados
 def get_db():
     db = SessionLocal()
     try:
@@ -29,92 +32,202 @@ def get_db():
     finally:
         db.close()
 
-# 1. Cadastrar um novo produto (Com validação de duplicidade, NF e log)
-@app.post("/produtos/", response_model=schemas.ProdutoResponse)
-def criar_produto(produto: schemas.ProdutoBase, db: Session = Depends(get_db)):
-    produto_existente = db.query(models.Produto).filter(models.Produto.nome == produto.nome).first()
-    if produto_existente:
-        raise HTTPException(status_code=400, detail="Já existe um produto cadastrado com este nome.")
+# Variáveis do Pipefy (Substitua ou mantenha puxando do seu .env)
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
-    db_produto = models.Produto(
-        nome=produto.nome,
-        descricao=produto.descricao,
-        preco=produto.preco,
-        quantidade=produto.quantidade,
-        nf=produto.nf  # <--- ADICIONADO AQUI
+PIPE_ID = os.getenv("PIPE_ID")
+PIPEFY_TOKEN = os.getenv("PIPEFY_TOKEN")
+
+
+@app.get("/pipefy/finalizados/")
+async def buscar_cards_finalizados(db: Session = Depends(get_db)):
+    if not PIPE_ID or not PIPEFY_TOKEN:
+        raise HTTPException(status_code=500, detail="Configurações do Pipefy ausentes no .env")
+
+    query = """
+    {
+      pipe(id: %s) {
+        phases {
+          name
+          cards {
+            edges {
+              node {
+                id
+                title
+                fields {
+                  name
+                  value
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """ % PIPE_ID
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            "https://app.pipefy.com/graphql",
+            json={"query": query},
+            headers={
+                "Authorization": f"Bearer {PIPEFY_TOKEN}",
+                "Content-Type": "application/json",
+            },
+        )
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=400, detail="Erro ao comunicar com a API do Pipefy")
+
+    dados = response.json()
+    if "errors" in dados:
+        raise HTTPException(status_code=400, detail=str(dados["errors"]))
+
+    fases = dados.get("data", {}).get("pipe", {}).get("phases", [])
+    
+    cards_processados = []
+    for fase in fases:
+        if fase["name"].lower() == "finalizado":
+            for edge in fase["cards"]["edges"]:
+                node = edge["node"]
+                
+                item_info = {
+                    "card_id": str(node.get("id", "-")),
+                    "produto_nome": "-",
+                    "prestador": "-",
+                    "cidade": "-",
+                    "nf": "-",
+                    "quantidade": 0
+                }
+                
+                for field in node["fields"]:
+                    fn = field["name"].strip().upper()
+                    val = field.get("value")
+                    
+                    if not val:
+                        continue
+                        
+                    if fn in ["RASTREADOR", "EQUIPAMENTO", "PRODUTO"]:
+                        item_info["produto_nome"] = val
+                    elif fn in ["QUANTIDADE", "QTD"]:
+                        item_info["quantidade"] = int(val) if val.isdigit() else 0
+                    elif "PRESTADOR" in fn:
+                        item_info["prestador"] = val
+                    elif "CIDADE" in fn or "ESTADO" in fn:
+                        item_info["cidade"] = val
+                    elif "NOTA" in fn or "NF" in fn:
+                        item_info["nf"] = val
+
+                cards_processados.append(item_info)
+
+    return {"cards_finalizados": cards_processados}
+
+
+@app.get("/pipefy/exportar-excel/")
+async def exportar_excel(db: Session = Depends(get_db)):
+    if not PIPE_ID or not PIPEFY_TOKEN:
+        raise HTTPException(status_code=500, detail="Configurações do Pipefy ausentes no .env")
+
+    query = """
+    {
+      pipe(id: %s) {
+        phases {
+          name
+          cards {
+            edges {
+              node {
+                id
+                title
+                fields {
+                  name
+                  value
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """ % PIPE_ID
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            "https://app.pipefy.com/graphql",
+            json={"query": query},
+            headers={"Authorization": f"Bearer {PIPEFY_TOKEN}", "Content-Type": "application/json"}
+        )
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=400, detail="Erro ao comunicar com a API do Pipefy")
+
+    dados = response.json()
+    fases = dados.get("data", {}).get("pipe", {}).get("phases", [])
+    
+    lista_dados = []
+    for fase in fases:
+        if fase["name"].lower() == "finalizado":
+            for edge in fase["cards"]["edges"]:
+                node = edge["node"]
+                item = {
+                    "Card ID": str(node.get("id", "-")),
+                    "Produto": "-",
+                    "Prestador": "-",
+                    "Cidade": "-",
+                    "NF": "-",
+                    "Qtd Saída": 0
+                }
+                for field in node["fields"]:
+                    fn = field["name"].strip().upper()
+                    val = field.get("value")
+                    if not val:
+                        continue
+                    if fn in ["RASTREADOR", "EQUIPAMENTO", "PRODUTO"]:
+                        item["Produto"] = val
+                    elif fn in ["QUANTIDADE", "QTD"]:
+                        item["Qtd Saída"] = int(val) if val.isdigit() else 0
+                    elif "PRESTADOR" in fn:
+                        item["Prestador"] = val
+                    elif "CIDADE" in fn or "ESTADO" in fn:
+                        item["Cidade"] = val
+                    elif "NOTA" in fn or "NF" in fn:
+                        item["NF"] = val
+                lista_dados.append(item)
+
+    df = pd.DataFrame(lista_dados)
+    
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Saídas Pipefy')
+    output.seek(0)
+
+    return StreamingResponse(
+        output,
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={"Content-Disposition": "attachment; filename=saidas_pipefy.xlsx"}
     )
-    db.add(db_produto)
+
+
+# --- ROTAS DE PRODUTOS (Mantenha as suas rotas de produtos /produtos/ aqui embaixo) ---
+@app.get("/produtos/")
+def listar_produtos(db: Session = Depends(get_db)):
+    return db.query(models.Produto).all()
+
+@app.post("/produtos/")
+def criar_produto(produto: dict, db: Session = Depends(get_db)):
+    # Adapte conforme o seu modelo de produto atual
+    novo_produto = models.Produto(**produto)
+    db.add(novo_produto)
     db.commit()
-    db.refresh(db_produto)
+    db.refresh(novo_produto)
+    return novo_produto
 
-    log = models.HistoricoMovimentacao(acao="CRIADO", produto_nome=db_produto.nome)
-    db.add(log)
-    db.commit()
-
-    return db_produto
-
-# 2. Listar produtos (Com paginação e busca por nome)
-@app.get("/produtos/", response_model=List[schemas.ProdutoResponse])
-def listar_produtos(
-    pesquisa: Optional[str] = Query(None, description="Buscar produto por nome"),
-    skip: int = 0, 
-    limit: int = 10, 
-    db: Session = Depends(get_db)
-):
-    query = db.query(models.Produto)
-    if pesquisa:
-        query = query.filter(models.Produto.nome.ilike(f"%{pesquisa}%"))
-    
-    produtos = query.offset(skip).limit(limit).all()
-    return produtos
-
-# 3. Listar produtos com estoque crítico
-@app.get("/produtos/estoque-critico/", response_model=List[schemas.ProdutoResponse])
-def listar_produtos_estoque_critico(db: Session = Depends(get_db)):
-    produtos_criticos = db.query(models.Produto).filter(models.Produto.quantidade < 5).all()
-    return produtos_criticos
-
-# 4. Rota para visualizar o Histórico de Movimentações
-@app.get("/historico/", response_model=List[schemas.HistoricoResponse])
-def ver_historico(db: Session = Depends(get_db)):
-    historico = db.query(models.HistoricoMovimentacao).all()
-    return historico
-
-# 5. Atualizar um produto existente
-@app.put("/produtos/{produto_id}", response_model=schemas.ProdutoResponse)
-def atualizar_produto(produto_id: int, produto: schemas.ProdutoBase, db: Session = Depends(get_db)):
-    db_produto = db.query(models.Produto).filter(models.Produto.id == produto_id).first()
-    if not db_produto:
-        raise HTTPException(status_code=404, detail="Produto não encontrado")
-    
-    db_produto.nome = produto.nome
-    db_produto.descricao = produto.descricao
-    db_produto.preco = produto.preco
-    db_produto.quantidade = produto.quantidade
-    db_produto.nf = produto.nf  # <--- ADICIONADO AQUI TAMBÉM
-    
-    db.commit()
-    db.refresh(db_produto)
-
-    log = models.HistoricoMovimentacao(acao="ATUALIZADO", produto_nome=db_produto.nome)
-    db.add(log)
-    db.commit()
-
-    return db_produto
-
-# 6. Deletar um produto existente
 @app.delete("/produtos/{produto_id}")
 def deletar_produto(produto_id: int, db: Session = Depends(get_db)):
-    db_produto = db.query(models.Produto).filter(models.Produto.id == produto_id).first()
-    if not db_produto:
+    produto = db.query(models.Produto).filter(models.Produto.id == produto_id).first()
+    if not produto:
         raise HTTPException(status_code=404, detail="Produto não encontrado")
-    
-    nome_produto = db_produto.nome
-    db.delete(db_produto)
+    db.delete(produto)
     db.commit()
-
-    log = models.HistoricoMovimentacao(acao="DELETADO", produto_nome=nome_produto)
-    db.add(log)
-    db.commit()
-
-    return {"detail": "Produto deletado com sucesso!"}
+    return {"message": "Deletado com sucesso"}

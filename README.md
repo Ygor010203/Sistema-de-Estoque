@@ -31,8 +31,10 @@ Siga os passos abaixo para rodar o projeto localmente na sua máquina:
    cd Sistema-de-Estoque
 
 Imagens do projeto:
-<img width="100%" alt="Tela principal do sistema" src="https://github.com/user-attachments/assets/26906474-9a67-4d08-9b92-dca33c5d4fa9" />
-<img width="100%" alt="Detalhes do estoque" src="https://github.com/user-attachments/assets/5c444e16-97a2-4fbe-a8d2-2bcafa605d50" />
-<img width="100%" alt="Integração e saídas" src="https://github.com/user-attachments/assets/bca03068-8493-4051-9b40-936348f217fb" />
+<img width="1891" height="860" alt="image" src="https://github.com/user-attachments/assets/ce6501c6-f511-473b-941b-7a369904355e" />
+<img width="1896" height="860" alt="image" src="https://github.com/user-attachments/assets/d87498bb-3837-4af5-b42f-ddd33bb97bb9" />
+
+
+
 
 

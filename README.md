@@ -1,4 +1,4 @@
-# 📦 Sistema de Controle de Estoque
+<img width="1891" height="860" alt="image" src="https://github.com/user-attachments/assets/238002f2-758d-42ad-af9f-0709b303e22b" /># 📦 Sistema de Controle de Estoque
 
 > Sistema desenvolvido em Python para gerenciamento eficiente de estoque, integrando automações de processos e manipulação de planilhas.
 
@@ -29,3 +29,10 @@ Siga os passos abaixo para rodar o projeto localmente na sua máquina:
    ```bash
    git clone [https://github.com/Ygor010203/Sistema-de-Estoque.git](https://github.com/Ygor010203/Sistema-de-Estoque.git)
    cd Sistema-de-Estoque
+
+Imagens do projeto:
+<img width="100%" alt="Tela principal do sistema" src="https://github.com/user-attachments/assets/26906474-9a67-4d08-9b92-dca33c5d4fa9" />
+<img width="100%" alt="Detalhes do estoque" src="https://github.com/user-attachments/assets/5c444e16-97a2-4fbe-a8d2-2bcafa605d50" />
+<img width="100%" alt="Integração e saídas" src="https://github.com/user-attachments/assets/bca03068-8493-4051-9b40-936348f217fb" />
+
+
